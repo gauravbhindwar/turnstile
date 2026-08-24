@@ -1,0 +1,78 @@
+# Turnstile configuration reference (§16 of AGENT_GATEWAY_SPEC.md).
+# Copy to ./turnstile.yaml and edit, or run `turnstile init`.
+# Precedence: built-in defaults < this file < env TURNSTILE_* (only TURNSTILE_CONFIG
+# for the file path today; per-field overrides go through ${VAR} interpolation
+# below, resolved from process.env at load time).
+# Hot-reload scope: policies_dir, prices_file, model_routes, mcp_servers.
+# NOT hot-reloaded: server.*, data_dir, storage — changing these needs a restart.
+
+server:
+  port: 8787              # data-plane + admin-plane HTTP port
+  forward_proxy_port: 8888 # separate port: CONNECT semantics don't mix with routing
+  host: 127.0.0.1          # non-loopback requires server.tls or i_understand_http: true (§17.3)
+  trust_proxy: false
+
+data_dir: ./turnstile-data    # sqlite db, keypair, exports
+
+admin:
+  token: ${TURNSTILE_ADMIN_TOKEN}   # required; min 16 chars
+
+upstreams:
+  - name: openai
+    kind: openai_compat
+    base_url: https://api.openai.com/v1
+    credential_env: OPENAI_API_KEY
+  - name: anthropic
+    kind: openai_compat
+    base_url: https://api.anthropic.com/v1/
+    credential_env: ANTHROPIC_API_KEY
+  - name: ollama
+    kind: openai_compat
+    base_url: http://localhost:11434/v1
+
+model_routes:
+  - { match: "gpt-*", upstream: openai }
+  - { match: "claude-*", upstream: anthropic }
+  - { match: "*", upstream: ollama }
+
+mcp_servers:
+  - { name: filesystem, url: "http://localhost:3010/mcp" }
+
+policies_dir: ./policies
+plugins_dir: ./plugins
+allow_local_plugins: false   # local plugins run in-process = trusted code (§17.3)
+
+prices_file: ./prices.yaml   # optional; bundled defaults used if omitted
+
+defaults:
+  default_action_by_class:
+    read: allow
+    mutate: allow
+    spend: allow
+
+fail_mode:                   # D10: fail-closed for spend/mutate, fail-open for read
+  spend: closed
+  mutate: closed
+  read: open
+
+approvals:
+  slack_webhook_url: ${SLACK_WEBHOOK_URL}
+  generic_webhook_url: null
+  default_timeout_s: 300
+  max_pending: 50
+  public_base_url: http://localhost:8787
+
+ledger:
+  checkpoint_every_rows: 1000
+  checkpoint_every_s: 60
+  retention_days: 0          # 0 = unlimited
+
+redaction:
+  store_message_content: true  # false = ledger stores only hashes + token counts
+  patterns: []
+
+logging:
+  level: info
+  format: json
+
+i_understand_http: false     # set true to boot on a non-loopback host without TLS

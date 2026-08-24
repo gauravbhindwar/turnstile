@@ -1,0 +1,20 @@
+# Container-internal config for docker-compose.yml. host: 0.0.0.0 is required
+# here so Docker's port publishing can reach the process (a service bound to
+# 127.0.0.1 inside a container is unreachable from the published port).
+# i_understand_http: true acknowledges §17.3's gate — the operator already
+# chose to publish 8787/8888 explicitly in docker-compose.yml.
+server:
+  port: 8787
+  forward_proxy_port: 8888
+  host: 0.0.0.0
+  trust_proxy: false
+
+data_dir: /app/turnstile-data
+
+admin:
+  token: ${TURNSTILE_ADMIN_TOKEN}
+
+policies_dir: /app/policies
+plugins_dir: /app/plugins
+
+i_understand_http: true

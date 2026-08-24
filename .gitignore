@@ -1,0 +1,22 @@
+# Internal planning doc — never publish this.
+AGENT_GATEWAY_SPEC.md
+
+node_modules/
+dist/
+build/
+*.log
+.turbo/
+coverage/
+turnstile-data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+.DS_Store
+*.tsbuildinfo
+__pycache__/
+*.pyc
+.venv/
