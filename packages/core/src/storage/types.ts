@@ -113,7 +113,7 @@ export interface Storage {
 
   events: {
     insertAction(event: ActionEvent): void;
-    insertDecision(decision: Decision, actionEventId: string, agentId: string, workspaceId: string): void;
+    insertDecision(decision: Decision, actionEventId: string): void;
     insertOutcome(outcome: OutcomeEvent, actionEventId: string): void;
     queryTimeline(filter: TimelineFilter, page: PageParams): TimelinePage;
     getExchange(traceId: string): TimelineEntry[];
