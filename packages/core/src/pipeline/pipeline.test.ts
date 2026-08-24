@@ -38,7 +38,7 @@ describe("Pipeline (end-to-end policy -> ledger -> SSE)", () => {
     dataDir = null;
   });
 
-  async function makePipeline(limitUsd: number) {
+  async function makePipeline(limitUsd: number, checkpointEveryRows = 1000) {
     storage = new SqliteStorage(":memory:");
     await storage.init();
     dataDir = mkdtempSync(join(tmpdir(), "turnstile-pipeline-test-"));
@@ -52,7 +52,7 @@ describe("Pipeline (end-to-end policy -> ledger -> SSE)", () => {
         defaultActionByClass: { read: "allow", mutate: "allow", spend: "allow" },
         failMode: { read: "open", mutate: "closed", spend: "closed" },
         checkpointKeypair: loadOrCreateCheckpointKeypair(dataDir),
-        checkpointEveryRows: 1000,
+        checkpointEveryRows,
         checkpointEveryMs: 60_000,
       },
       [spendCapPolicy(limitUsd)],
@@ -125,5 +125,26 @@ describe("Pipeline (end-to-end policy -> ledger -> SSE)", () => {
     const usage = s.budgets.getUsage("ws-1:agent-1:invoice-bot-cap", new Date().toISOString().slice(0, 10));
     expect(usage.settledUsd).toBe(0.0002);
     expect(usage.reservedUsd).toBe(0);
+  });
+
+  it("writes a signed checkpoint once the row threshold is crossed", async () => {
+    // 2 rows/call (action+decision) with a threshold of 3 -> the 2nd call
+    // pushes rowsSinceCheckpoint to 4, crossing 3, triggering a checkpoint.
+    const { pipeline, storage: s } = await makePipeline(100, 3);
+    await pipeline.runPolicyStage(makeActionEvent({ eventId: "c1" }));
+    let head = await s.ledger.latest();
+    expect(head!.seq).toBe(1); // no checkpoint yet: only 2 rows written
+
+    await pipeline.runPolicyStage(makeActionEvent({ eventId: "c2" }));
+    head = await s.ledger.latest();
+    // seq 4 is the checkpoint row appended right after action(2)+decision(3).
+    expect(head!.seq).toBe(4);
+
+    const rows: unknown[] = [];
+    for await (const row of s.ledger.iterate()) rows.push(row);
+    const checkpointRow = rows[4] as { kind: string; payload: { type: string; upToSeq: number } };
+    expect(checkpointRow.kind).toBe("system");
+    expect(checkpointRow.payload.type).toBe("checkpoint");
+    expect(checkpointRow.payload.upToSeq).toBe(3);
   });
 });
