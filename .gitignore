@@ -20,3 +20,5 @@ turnstile-data/
 __pycache__/
 *.pyc
 .venv/
+tools/loadtest/report.md
+tools/loadtest/report.json

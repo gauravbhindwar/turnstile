@@ -1,0 +1,13 @@
+id: perf-spend-cap-workspace
+description: "perf smoke: a second spend_cap, workspace-scoped, also with headroom"
+enabled: true
+priority: 40
+match:
+  classes: ["spend"]
+plugin: spend_cap
+params:
+  limit_usd: 10000
+  window: daily
+  on_breach: deny
+  warn_at_pct: 99
+  scope: workspace

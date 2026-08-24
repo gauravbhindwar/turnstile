@@ -1,0 +1,11 @@
+id: perf-allow-upstream
+description: "perf smoke: cheap allowlist match on upstream"
+enabled: true
+priority: 20
+match:
+  classes: ["spend"]
+plugin: allowlist
+params:
+  field: upstream
+  deny: ["blocked-upstream"]
+  mode: deny_only

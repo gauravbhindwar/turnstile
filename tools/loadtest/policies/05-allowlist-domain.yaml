@@ -1,0 +1,12 @@
+id: perf-allowlist-domain
+description: "perf smoke: 5th policy, also matches every request in this run"
+enabled: true
+priority: 50
+match:
+  agents: ["perf-bot"]
+  classes: ["spend"]
+plugin: allowlist
+params:
+  field: domain
+  deny: ["evil.example"]
+  mode: deny_only

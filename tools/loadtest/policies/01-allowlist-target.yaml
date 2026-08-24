@@ -1,0 +1,11 @@
+id: perf-allow-gpt
+description: "perf smoke: cheap allowlist match on target"
+enabled: true
+priority: 10
+match:
+  classes: ["spend"]
+plugin: allowlist
+params:
+  field: target
+  allow: ["gpt-*"]
+  mode: allow_only

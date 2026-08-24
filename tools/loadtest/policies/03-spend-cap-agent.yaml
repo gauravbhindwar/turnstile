@@ -1,0 +1,14 @@
+id: perf-spend-cap-agent
+description: "perf smoke: spend_cap with headroom so it never actually breaches mid-run"
+enabled: true
+priority: 30
+match:
+  agents: ["perf-bot"]
+  classes: ["spend"]
+plugin: spend_cap
+params:
+  limit_usd: 1000
+  window: daily
+  on_breach: deny
+  warn_at_pct: 95
+  scope: agent

@@ -44,9 +44,12 @@ export function loadPolicies(policiesDir: string, plugins: Map<string, PolicyPlu
       if (!plugin) {
         throw new Error(`unknown plugin "${parsed.plugin}"`);
       }
-      plugin.paramsSchema.parse(parsed.params);
+      // Use the *parsed* params (with the plugin's own schema defaults
+      // applied), not the raw YAML — otherwise an omitted optional field
+      // (e.g. allowlist's `deny: []` default) never reaches the plugin.
+      const params: unknown = plugin.paramsSchema.parse(parsed.params);
 
-      policies.push(parsed);
+      policies.push({ ...parsed, params });
     } catch (err) {
       const message = err instanceof ZodError ? err.issues.map((i) => i.message).join("; ") : (err as Error).message;
       errors.push(new PolicyLoadError(`${file}: ${message}`, fullPath));
