@@ -50,6 +50,16 @@ jobs:
       - run: pnpm build
       - run: pnpm test
 
+  sdk-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "./packages/sdk-python[dev]"
+      - run: pytest packages/sdk-python/tests -v
+
   perf-smoke:
     runs-on: ubuntu-latest
     needs: [lint, typecheck, unit]

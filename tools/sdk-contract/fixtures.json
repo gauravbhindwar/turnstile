@@ -1,0 +1,85 @@
+[
+  {
+    "name": "allow",
+    "description": "A normal allowed action: guard() returns allowed=true with eventId/traceId for later report().",
+    "mockResponse": {
+      "status": 200,
+      "body": {
+        "data": {
+          "allowed": true,
+          "eventId": "evt-allow-1",
+          "traceId": "trace-allow-1",
+          "decision": { "outcome": "allow", "finalReason": "all matching policies passed", "matchedPolicies": [] }
+        }
+      }
+    },
+    "expected": { "allowed": true, "eventId": "evt-allow-1", "traceId": "trace-allow-1" }
+  },
+  {
+    "name": "deny",
+    "description": "A policy-blocked action: guard() returns allowed=false, no eventId/traceId, and report() becomes a no-op.",
+    "mockResponse": {
+      "status": 403,
+      "body": {
+        "error": {
+          "type": "turnstile_policy_block",
+          "code": "TURNSTILE_POLICY_BLOCK",
+          "reason": "denied by policy \"no-sensitive-tools\": tool not allowlisted",
+          "policyId": "no-sensitive-tools",
+          "traceId": "trace-deny-1"
+        }
+      }
+    },
+    "expected": { "allowed": false, "errorCode": "TURNSTILE_POLICY_BLOCK" }
+  },
+  {
+    "name": "approval_denied",
+    "description": "An escalated action a human denied: still a 403, different error code.",
+    "mockResponse": {
+      "status": 403,
+      "body": {
+        "error": {
+          "type": "turnstile_policy_block",
+          "code": "APPROVAL_DENIED",
+          "reason": "too risky",
+          "approvalId": "appr-1",
+          "traceId": "trace-deny-2"
+        }
+      }
+    },
+    "expected": { "allowed": false, "errorCode": "APPROVAL_DENIED" }
+  },
+  {
+    "name": "approval_timeout",
+    "description": "An escalated action nobody decided on in time.",
+    "mockResponse": {
+      "status": 403,
+      "body": {
+        "error": {
+          "type": "turnstile_policy_block",
+          "code": "APPROVAL_TIMEOUT",
+          "reason": "no decision before the approval deadline",
+          "approvalId": "appr-2",
+          "traceId": "trace-deny-3"
+        }
+      }
+    },
+    "expected": { "allowed": false, "errorCode": "APPROVAL_TIMEOUT" }
+  },
+  {
+    "name": "approval_queue_full",
+    "description": "Too many parked approvals at once.",
+    "mockResponse": {
+      "status": 503,
+      "body": {
+        "error": {
+          "type": "turnstile_policy_block",
+          "code": "APPROVAL_QUEUE_FULL",
+          "reason": "approval queue is full (max_pending_approvals reached)",
+          "traceId": "trace-deny-4"
+        }
+      }
+    },
+    "expected": { "allowed": false, "errorCode": "APPROVAL_QUEUE_FULL" }
+  }
+]
