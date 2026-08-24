@@ -2,9 +2,17 @@ import { useState } from "react";
 import Live from "./pages/Live.js";
 import Agents from "./pages/Agents.js";
 import Budgets from "./pages/Budgets.js";
+import Approvals from "./pages/Approvals.js";
 import { getAdminToken, setAdminToken, clearAdminToken } from "./lib/auth.js";
 
-type Tab = "live" | "agents" | "budgets";
+type Tab = "live" | "agents" | "approvals" | "budgets";
+
+// Slack/webhook notifications link to /app/approvals/:id (§11.2) — land on
+// the Approvals tab when opened that way. No client router yet, so this is
+// "which tab", not "which row"; the pending list shows everything anyway.
+function initialTab(): Tab {
+  return window.location.pathname.startsWith("/app/approvals") ? "approvals" : "live";
+}
 
 function TokenGate({ onReady }: { onReady: () => void }) {
   const [value, setValue] = useState("");
@@ -37,7 +45,7 @@ function TokenGate({ onReady }: { onReady: () => void }) {
 
 export default function App() {
   const [token, setToken] = useState(getAdminToken());
-  const [tab, setTab] = useState<Tab>("live");
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   if (!token) {
     return <TokenGate onReady={() => setToken(getAdminToken())} />;
@@ -49,7 +57,7 @@ export default function App() {
         <div className="flex items-center gap-6">
           <span className="font-semibold">Turnstile</span>
           <nav className="flex gap-1 text-sm">
-            {(["live", "agents", "budgets"] as const).map((t) => (
+            {(["live", "agents", "approvals", "budgets"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -73,6 +81,7 @@ export default function App() {
       <main className="flex-1 overflow-hidden">
         {tab === "live" && <Live />}
         {tab === "agents" && <Agents />}
+        {tab === "approvals" && <Approvals />}
         {tab === "budgets" && <Budgets />}
       </main>
     </div>

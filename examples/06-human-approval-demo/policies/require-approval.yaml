@@ -1,0 +1,12 @@
+id: approval-demo-requires-review
+description: "every call from approval-bot needs a human sign-off"
+enabled: true
+priority: 100
+match:
+  agents: ["approval-bot"]
+  classes: ["spend"]
+plugin: require_approval
+params:
+  message_template: "{{agent}} wants to call {{target}} — approve in the dashboard"
+  timeout_s: 120
+  on_timeout: deny
