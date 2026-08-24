@@ -19,7 +19,7 @@ pnpm test
 ## Ground rules
 
 - Never violate a Locked Architectural Decision (§3 of
-  [AGENT_GATEWAY_SPEC.md](./AGENT_GATEWAY_SPEC.md)) or build a listed Non-Goal
+  [docs/DESIGN.md](./docs/DESIGN.md)) or build a listed Non-Goal
   (§2) without first opening an issue to discuss it.
 - Work milestone by milestone (§24); if the spec is ambiguous, pick the
   simplest option consistent with §3 and record the choice in

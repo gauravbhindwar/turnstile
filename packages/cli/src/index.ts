@@ -50,7 +50,7 @@ async function main(): Promise<void> {
     }
     case "keys":
     case "verify-ledger": {
-      console.error(`"${command}" ships in Milestone 1 (see AGENT_GATEWAY_SPEC.md §24).`);
+      console.error(`"${command}" ships in Milestone 1 (see docs/DESIGN.md).`);
       process.exit(1);
       break;
     }

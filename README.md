@@ -8,7 +8,7 @@ agent did, from a single choke point.
 > **Status: pre-alpha (Milestone 0 — skeleton).** The config system, logging,
 > and `/healthz` are live; the policy engine, ledger, and dashboard land in
 > Milestone 1. Nothing here is ready for production traffic yet. Follow
-> [AGENT_GATEWAY_SPEC.md](./AGENT_GATEWAY_SPEC.md) for the full plan.
+> [docs/DESIGN.md](./docs/DESIGN.md) for the full plan.
 
 ## Why
 

@@ -20,7 +20,7 @@ for undisclosed vulnerabilities.
 
 See the threat model in
 [docs/security/threat-model.md](./docs/security/threat-model.md) (mirrors §17
-of [AGENT_GATEWAY_SPEC.md](./AGENT_GATEWAY_SPEC.md)) for the adversaries and
+of [docs/DESIGN.md](./docs/DESIGN.md)) for the adversaries and
 assets Turnstile's design considers in scope.
 
 ## Supported versions

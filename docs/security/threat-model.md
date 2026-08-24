@@ -1,7 +1,7 @@
 # Threat Model
 
-Mirrors §17 of [AGENT_GATEWAY_SPEC.md](../../AGENT_GATEWAY_SPEC.md). Update
-this file whenever §17 changes or a new milestone adds attack surface.
+Mirrors the security model in [DESIGN.md](../DESIGN.md). Update this file
+whenever that changes or a new milestone adds attack surface.
 
 ## Assets
 
@@ -32,6 +32,6 @@ attacks beyond lockfile pinning + provenance builds.
 
 ## Controls planned (M1+)
 
-See §17.3 of the spec: credential vault (AES-256-GCM), hashed agent keys,
-SSRF containment for the forward proxy, ledger anti-tamper via Ed25519
-checkpoints, admin/data-plane auth separation.
+Credential vault (AES-256-GCM), hashed agent keys, SSRF containment for the
+forward proxy, ledger anti-tamper via Ed25519 checkpoints, admin/data-plane
+auth separation.

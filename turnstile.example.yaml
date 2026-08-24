@@ -1,4 +1,4 @@
-# Turnstile configuration reference (§16 of AGENT_GATEWAY_SPEC.md).
+# Turnstile configuration reference (§16 of docs/DESIGN.md).
 # Copy to ./turnstile.yaml and edit, or run `turnstile init`.
 # Precedence: built-in defaults < this file < env TURNSTILE_* (only TURNSTILE_CONFIG
 # for the file path today; per-field overrides go through ${VAR} interpolation
