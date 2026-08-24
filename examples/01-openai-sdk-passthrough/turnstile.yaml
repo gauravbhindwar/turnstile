@@ -1,0 +1,16 @@
+server:
+  port: 8787
+  forward_proxy_port: 8888
+  host: 127.0.0.1
+data_dir: ./turnstile-data
+admin:
+  token: ${TURNSTILE_ADMIN_TOKEN}
+upstreams:
+  - name: openai
+    kind: openai_compat
+    base_url: https://api.openai.com/v1
+    credential_env: OPENAI_API_KEY
+model_routes:
+  - { match: "gpt-*", upstream: openai }
+policies_dir: ./policies
+plugins_dir: ./plugins

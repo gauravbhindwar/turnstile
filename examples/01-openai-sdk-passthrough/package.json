@@ -1,0 +1,8 @@
+{
+  "name": "turnstile-example-01-openai-sdk-passthrough",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "openai": "^4.68.0"
+  }
+}

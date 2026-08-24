@@ -16,6 +16,7 @@
   "dependencies": {
     "@turnstile/core": "workspace:*",
     "fastify": "^4.28.1",
+    "@fastify/static": "^7.0.4",
     "minimatch": "^9.0.5"
   },
   "devDependencies": {

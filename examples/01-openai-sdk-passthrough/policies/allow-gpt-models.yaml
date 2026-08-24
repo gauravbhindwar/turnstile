@@ -1,0 +1,11 @@
+id: allow-gpt-models-only
+description: "only gpt-* models are allowed through this gateway instance"
+enabled: true
+priority: 100
+match:
+  classes: ["spend"]
+plugin: allowlist
+params:
+  field: target
+  allow: ["gpt-*"]
+  mode: allow_only

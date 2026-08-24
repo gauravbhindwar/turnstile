@@ -1,0 +1,22 @@
+server:
+  port: 8787
+  forward_proxy_port: 8888
+  host: 127.0.0.1
+data_dir: ./turnstile-data
+admin:
+  token: ${TURNSTILE_ADMIN_TOKEN}
+upstreams:
+  - name: openai
+    kind: openai_compat
+    base_url: https://api.openai.com/v1
+    credential_env: OPENAI_API_KEY
+  - name: anthropic
+    kind: openai_compat
+    base_url: https://api.anthropic.com/v1
+    credential_env: ANTHROPIC_API_KEY
+model_routes:
+  # Same agent, same SDK, two vendors — no code branches on which one.
+  - { match: "gpt-*", upstream: openai }
+  - { match: "claude-*", upstream: anthropic }
+policies_dir: ./policies
+plugins_dir: ./plugins

@@ -5,9 +5,11 @@ flows through — real-time policy enforcement (spend caps, allowlists, human
 approval) and a cryptographically verifiable audit ledger of everything the
 agent did, from a single choke point.
 
-> **Status: pre-alpha (Milestone 0 — skeleton).** The config system, logging,
-> and `/healthz` are live; the policy engine, ledger, and dashboard land in
-> Milestone 1. Nothing here is ready for production traffic yet. Follow
+> **Status: alpha (Milestone 1 in progress).** The OpenAI-compatible adapter,
+> credential vault, policy engine (`spend_cap` + `allowlist`), hash-chained
+> ledger, admin API, and dashboard (Live/Agents/Budgets) all work end to end —
+> see [examples/05-spend-cap-demo](./examples/05-spend-cap-demo). Approvals,
+> MCP, and the forward proxy land in later milestones. Follow
 > [docs/DESIGN.md](./docs/DESIGN.md) for the full plan.
 
 ## Why
@@ -28,24 +30,33 @@ Agent ──(OpenAI-dialect / MCP / SDK / HTTP proxy)──▶ Turnstile ──�
 ```
 
 Every action is normalized → authenticated → policy-evaluated → executed →
-metered → ledgered → streamed to the dashboard. See §4 of the spec for the
-full seven-stage pipeline.
+metered → ledgered → streamed to the dashboard. See
+[docs/DESIGN.md](./docs/DESIGN.md) for the full seven-stage pipeline.
 
-## Quickstart (developer setup, M0)
+## Quickstart
 
 ```bash
 pnpm install
+pnpm build
+pnpm --filter @turnstile/dashboard build   # optional: adds the web UI at /app
+
 cp turnstile.example.yaml turnstile.yaml
 export TURNSTILE_ADMIN_TOKEN=$(openssl rand -hex 16)
-pnpm --filter @turnstile/gateway build
-pnpm --filter @turnstile/cli build
-node packages/cli/dist/index.js start
+
+node packages/cli/dist/index.js keys create my-agent   # prints a trn_... key, shown once
+node packages/cli/dist/index.js start &
+
 curl http://localhost:8787/healthz
+curl http://localhost:8787/v1/chat/completions \
+  -H "Authorization: Bearer <the trn_... key>" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hi"}]}'
 ```
 
-The one-command `docker run` / `npx turnstile start` flow, and the "point your
-agent at Turnstile and watch a spend cap block it live" demo, ship in
-Milestone 1 (v0.1.0).
+To see a spend cap actually block a runaway agent — live, on the
+dashboard — run [examples/05-spend-cap-demo](./examples/05-spend-cap-demo):
+it spins up a fake OpenAI-compatible upstream, sets a $0.01/day cap, and
+hammers `/v1/chat/completions` until Turnstile says no.
 
 ## Feature status
 
@@ -53,10 +64,11 @@ Milestone 1 (v0.1.0).
 |---|---|
 | Config system (YAML + `${VAR}` + hot-reload) | ✅ M0 |
 | `/healthz` | ✅ M0 |
-| OpenAI-compatible adapter + credential vault | 🔜 M1 |
-| Policy engine (`spend_cap`, `allowlist`) | 🔜 M1 |
-| Hash-chained ledger + checkpoints | 🔜 M1 |
-| Dashboard (Live, Agents, Budgets) | 🔜 M1 |
+| OpenAI-compatible adapter (streaming + non-streaming) + credential vault | ✅ M1 |
+| Policy engine (`spend_cap`, `allowlist`) | ✅ M1 |
+| Hash-chained ledger + Ed25519 checkpoints + `verify-ledger` | ✅ M1 |
+| Admin API (agents/keys, upstreams, events, SSE stream, budgets, ledger) | ✅ M1 |
+| Dashboard (Live, Agents, Budgets) | ✅ M1 |
 | Human-in-the-loop approvals + Slack | 🔜 M2 |
 | MCP proxy + `mcp_tool_guard` | 🔜 M3 |
 | Forward proxy (domain policies) | 🔜 M4 |
@@ -64,13 +76,15 @@ Milestone 1 (v0.1.0).
 ## Security model (honest limitations)
 
 - Vendor API keys never touch the agent — Turnstile injects them from an
-  encrypted credential vault. See §17.
+  encrypted credential vault (AES-256-GCM).
 - The ledger is tamper-evident (SHA-256 chain + Ed25519-signed checkpoints),
   not tamper-proof against root on the host.
 - `CONNECT` (TLS) traffic through the forward proxy is logged by domain and
   byte count only — Turnstile does not MITM by default.
 - Local policy plugins run in-process and are trusted code.
 - Single-node only in v0.x — SQLite is a single writer.
+- Storage uses Node's built-in `node:sqlite` rather than `better-sqlite3`
+  (ADR-003) — same on-disk SQLite file, no native build step required.
 
 ## License
 

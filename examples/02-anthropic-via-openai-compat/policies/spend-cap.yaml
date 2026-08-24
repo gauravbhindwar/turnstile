@@ -1,0 +1,14 @@
+id: multi-vendor-daily-cap
+description: "multi-vendor-bot may spend max $2/day across BOTH OpenAI and Anthropic calls"
+enabled: true
+priority: 100
+match:
+  agents: ["multi-vendor-bot"]
+  classes: ["spend"]
+plugin: spend_cap
+params:
+  limit_usd: 2.00
+  window: daily
+  on_breach: deny
+  warn_at_pct: 80
+  scope: agent

@@ -1,0 +1,8 @@
+{
+  "name": "turnstile-example-02-anthropic-via-openai-compat",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "openai": "^4.68.0"
+  }
+}

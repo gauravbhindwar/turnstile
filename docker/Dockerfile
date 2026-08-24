@@ -8,7 +8,7 @@ WORKDIR /app
 
 FROM base AS pruner
 COPY . .
-RUN npx --yes turbo prune @turnstile/gateway @turnstile/cli --docker
+RUN npx --yes turbo prune @turnstile/gateway @turnstile/cli @turnstile/dashboard --docker
 
 FROM base AS builder
 COPY --from=pruner /app/out/json/ .
@@ -18,12 +18,16 @@ COPY --from=pruner /app/out/full/ .
 # turbo prune only copies files reachable from package.json/lockfile graphs,
 # not root-level shared configs like tsconfig.base.json — copy it explicitly.
 COPY tsconfig.base.json ./tsconfig.base.json
-RUN pnpm turbo run build --filter=@turnstile/gateway --filter=@turnstile/cli
+RUN pnpm turbo run build --filter=@turnstile/gateway --filter=@turnstile/cli --filter=@turnstile/dashboard
 RUN pnpm deploy --filter=@turnstile/gateway --prod --legacy /app/deploy/gateway
 
 FROM gcr.io/distroless/nodejs22-debian12 AS runner
 WORKDIR /app
 COPY --from=builder /app/deploy/gateway /app
+# Gateway looks for the dashboard build two directories up from its own
+# dist/ (mirroring the monorepo's packages/gateway + packages/dashboard
+# layout) — see packages/gateway/src/app.ts.
+COPY --from=builder /app/packages/dashboard/dist /dashboard/dist
 ENV NODE_ENV=production
 EXPOSE 8787 8888
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s CMD ["/nodejs/bin/node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

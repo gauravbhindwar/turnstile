@@ -1,4 +1,7 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
+import fastifyStatic from "@fastify/static";
 import type { GatewayContext } from "./context.js";
 import { registerOpenAiRoutes } from "./adapters/openai/routes.js";
 import { registerAdminRoutes } from "./admin/routes.js";
@@ -20,6 +23,24 @@ export function buildApp(ctx: GatewayContext) {
 
   registerOpenAiRoutes(app, ctx);
   registerAdminRoutes(app, ctx);
+
+  // Dashboard is built separately (packages/dashboard) and served statically
+  // (D6: one process, one port). Only mounted if the built assets are
+  // actually present — the Docker deploy stage doesn't currently bundle
+  // the dashboard, so the gateway must still boot cleanly without it.
+  const dashboardDist = fileURLToPath(new URL("../../dashboard/dist", import.meta.url));
+  if (existsSync(dashboardDist)) {
+    void app.register(fastifyStatic, { root: dashboardDist, prefix: "/app/", decorateReply: false });
+    app.get("/", async (_request, reply) => reply.redirect("/app/"));
+    app.setNotFoundHandler(async (request, reply) => {
+      if (request.raw.url?.startsWith("/app")) {
+        return reply.sendFile("index.html");
+      }
+      return reply.code(404).send({ error: { code: "NOT_FOUND", message: "no such route" } });
+    });
+  } else {
+    ctx.logger.warn({ dashboardDist }, "dashboard build not found; /app will 404 (run `pnpm --filter @turnstile/dashboard build`)");
+  }
 
   return app;
 }
