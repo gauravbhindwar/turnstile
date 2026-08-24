@@ -1,0 +1,14 @@
+id: spend-cap-demo-bot
+description: "demo-bot may spend max $0.01/day on model calls — deliberately tiny so the demo breaches fast"
+enabled: true
+priority: 100
+match:
+  agents: ["demo-bot"]
+  classes: ["spend"]
+plugin: spend_cap
+params:
+  limit_usd: 0.01
+  window: daily
+  on_breach: deny
+  warn_at_pct: 80
+  scope: agent

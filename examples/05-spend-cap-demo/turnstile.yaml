@@ -1,0 +1,18 @@
+server:
+  port: 8787
+  forward_proxy_port: 8888
+  host: 127.0.0.1
+data_dir: ./turnstile-data
+admin:
+  token: ${TURNSTILE_ADMIN_TOKEN}
+upstreams:
+  - name: fake
+    kind: openai_compat
+    base_url: http://localhost:4100/v1
+model_routes:
+  # Routed to the fake upstream, but named to match the bundled default
+  # price sheet's "gpt-4o*" glob so spend_cap has a real $/token rate to
+  # work with — the fake server ignores the model name either way.
+  - { match: "gpt-4o*", upstream: fake }
+policies_dir: ./policies
+plugins_dir: ./plugins

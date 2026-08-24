@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { writeFileSync, existsSync } from "node:fs";
+import { keysCommand } from "./commands/keys.js";
+import { verifyLedgerCommand } from "./commands/verifyLedger.js";
 
 const EXAMPLE_CONFIG = `server:
   port: 8787
@@ -19,7 +21,7 @@ policies_dir: ./policies
 plugins_dir: ./plugins
 `;
 
-const [, , command] = process.argv;
+const [, , command, ...rest] = process.argv;
 
 function printUsage(): void {
   console.log(`turnstile <command>
@@ -27,8 +29,8 @@ function printUsage(): void {
 Commands:
   init            Write a starter turnstile.yaml in the current directory
   start           Start the gateway (delegates to @turnstile/gateway)
-  keys            Manage agent keys (Milestone 1)
-  verify-ledger   Verify the ledger hash chain (Milestone 1)
+  keys            Manage agent keys: create/revoke/list (run "turnstile keys" for usage)
+  verify-ledger   Verify the ledger hash chain [--from N] [--to N]
 `);
 }
 
@@ -48,10 +50,12 @@ async function main(): Promise<void> {
       await import("@turnstile/gateway");
       break;
     }
-    case "keys":
+    case "keys": {
+      await keysCommand(rest);
+      break;
+    }
     case "verify-ledger": {
-      console.error(`"${command}" ships in Milestone 1 (see docs/DESIGN.md).`);
-      process.exit(1);
+      await verifyLedgerCommand(rest);
       break;
     }
     default: {
