@@ -4,6 +4,7 @@ import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import type { GatewayContext } from "./context.js";
 import { registerOpenAiRoutes } from "./adapters/openai/routes.js";
+import { registerActionsRoutes } from "./adapters/actions/routes.js";
 import { registerAdminRoutes } from "./admin/routes.js";
 
 const BOOT_TIME = Date.now();
@@ -22,12 +23,13 @@ export function buildApp(ctx: GatewayContext) {
   }));
 
   registerOpenAiRoutes(app, ctx);
+  registerActionsRoutes(app, ctx);
   registerAdminRoutes(app, ctx);
 
   // Dashboard is built separately (packages/dashboard) and served statically
   // (D6: one process, one port). Only mounted if the built assets are
-  // actually present — the Docker deploy stage doesn't currently bundle
-  // the dashboard, so the gateway must still boot cleanly without it.
+  // actually present, so a local `pnpm --filter @turnstile/gateway build`
+  // without the dashboard step still boots cleanly.
   const dashboardDist = fileURLToPath(new URL("../../dashboard/dist", import.meta.url));
   if (existsSync(dashboardDist)) {
     void app.register(fastifyStatic, { root: dashboardDist, prefix: "/app/", decorateReply: false });
