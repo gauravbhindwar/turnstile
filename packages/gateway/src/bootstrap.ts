@@ -3,6 +3,9 @@ import {
   SqliteStorage,
   Pipeline,
   EventBus,
+  ApprovalManager,
+  SlackNotifier,
+  GenericWebhookNotifier,
   loadPriceSheet,
   loadOrCreateMasterKey,
   loadOrCreateCheckpointKeypair,
@@ -10,6 +13,7 @@ import {
   loadPolicies,
   encryptCredential,
   uuidv7,
+  type Notifier,
   type TurnstileConfig,
   type Logger,
 } from "@turnstile/core";
@@ -66,5 +70,22 @@ export async function bootstrap(config: TurnstileConfig, logger: Logger): Promis
     plugins,
   );
 
-  return { config, logger, storage, pipeline, priceSheet, eventBus, plugins, policies, credentialMasterKey };
+  const notifiers: Notifier[] = [];
+  if (config.approvals.slack_webhook_url) {
+    notifiers.push(new SlackNotifier(config.approvals.slack_webhook_url, logger));
+  }
+  if (config.approvals.generic_webhook_url) {
+    notifiers.push(new GenericWebhookNotifier(config.approvals.generic_webhook_url, logger));
+  }
+  const approvalManager = new ApprovalManager({
+    storage,
+    logger,
+    defaultTimeoutS: config.approvals.default_timeout_s,
+    maxPending: config.approvals.max_pending,
+    publicBaseUrl: config.approvals.public_base_url,
+    notifiers,
+  });
+  approvalManager.start();
+
+  return { config, logger, storage, pipeline, priceSheet, eventBus, plugins, policies, credentialMasterKey, approvalManager };
 }

@@ -100,6 +100,20 @@ export interface BudgetUsage {
   settledUsd: number;
 }
 
+export type ApprovalStatus = "pending" | "approved" | "denied" | "expired";
+
+export interface ApprovalRow {
+  id: string;
+  actionEventId: string;
+  status: ApprovalStatus;
+  summary: unknown;
+  createdAt: string;
+  expiresAt: string;
+  decidedAt: string | null;
+  decidedBy: string | null;
+  note: string | null;
+}
+
 export interface Storage {
   init(): Promise<void>;
   migrate(): Promise<void>;
@@ -131,6 +145,18 @@ export interface Storage {
     set(ns: string, key: string, value: string, ttlMs?: number): void;
     incr(ns: string, key: string, by: number, ttlMs?: number): number;
     delete(ns: string, key: string): void;
+  };
+
+  approvals: {
+    create(row: ApprovalRow): void;
+    get(id: string): ApprovalRow | null;
+    listPending(): ApprovalRow[];
+    decide(id: string, status: "approved" | "denied", decidedBy: string, note: string | null): ApprovalRow | null;
+    // Durable timeout sweep (§11): marks every still-pending row whose
+    // expiresAt has passed as expired, and returns those rows. Must be
+    // callable on every boot (not only via setTimeout) so a process
+    // restart can't strand a parked approval forever.
+    expireOverdue(nowIso: string): ApprovalRow[];
   };
 
   workspaces: {

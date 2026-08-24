@@ -33,3 +33,6 @@ export * from "./policy/plugins/index.js";
 
 export * from "./bus/eventBus.js";
 export * from "./pipeline/pipeline.js";
+
+export * from "./approvals/manager.js";
+export * from "./approvals/notifiers.js";

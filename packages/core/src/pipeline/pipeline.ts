@@ -1,6 +1,6 @@
 import { uuidv7 } from "../ids.js";
 import type { ActionEvent, Decision, OutcomeEvent } from "../types/action.js";
-import type { Storage } from "../storage/types.js";
+import type { ApprovalRow, Storage } from "../storage/types.js";
 import type { Logger } from "../logging/logger.js";
 import type { PolicyFile } from "../policy/schema.js";
 import type { PolicyPlugin } from "../policy/types.js";
@@ -117,6 +117,18 @@ export class Pipeline {
       );
     }
 
+    await this.maybeCheckpoint();
+  }
+
+  // Records an approval's terminal decision (approved/denied/expired) as
+  // its own ledger row (kind "approval") and publishes it live — separate
+  // from the original "escalate" Decision row, since it can land seconds
+  // or minutes later, from a human, not a policy plugin.
+  async recordApprovalDecision(approval: ApprovalRow): Promise<void> {
+    const { storage, eventBus } = this.options;
+    await storage.ledger.append([{ eventId: approval.id, ts: approval.decidedAt ?? new Date().toISOString(), kind: "approval", payload: approval }]);
+    this.rowsSinceCheckpoint += 1;
+    eventBus.publish({ type: "approval", data: approval });
     await this.maybeCheckpoint();
   }
 

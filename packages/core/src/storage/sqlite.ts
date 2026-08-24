@@ -12,6 +12,7 @@ import { MIGRATION_0001_INIT } from "./migrations/0001_init.js";
 import type {
   AgentKeyRow,
   AgentRow,
+  ApprovalRow,
   AppendResult,
   BudgetUsage,
   CredentialRow,
@@ -576,5 +577,100 @@ export class SqliteStorage implements Storage {
         ? { id: row.id, label: row.label, ciphertext: Buffer.from(row.ciphertext), createdAt: row.created_at }
         : null;
     },
+  };
+
+  approvals: Storage["approvals"] = {
+    create: (row: ApprovalRow): void => {
+      this.db
+        .prepare(
+          `INSERT INTO approvals(id, action_event_id, status, summary_json, created_at, expires_at, decided_at, decided_by, note)
+           VALUES (@id, @actionEventId, @status, @summaryJson, @createdAt, @expiresAt, @decidedAt, @decidedBy, @note)`,
+        )
+        .run({
+          id: row.id,
+          actionEventId: row.actionEventId,
+          status: row.status,
+          summaryJson: JSON.stringify(row.summary),
+          createdAt: row.createdAt,
+          expiresAt: row.expiresAt,
+          decidedAt: row.decidedAt,
+          decidedBy: row.decidedBy,
+          note: row.note,
+        });
+    },
+
+    get: (id: string): ApprovalRow | null => {
+      const row = this.db
+        .prepare(
+          "SELECT id, action_event_id, status, summary_json, created_at, expires_at, decided_at, decided_by, note FROM approvals WHERE id = ?",
+        )
+        .get(id) as unknown as ApprovalDbRow | undefined;
+      return row ? mapApprovalRow(row) : null;
+    },
+
+    listPending: (): ApprovalRow[] => {
+      const rows = this.db
+        .prepare(
+          "SELECT id, action_event_id, status, summary_json, created_at, expires_at, decided_at, decided_by, note FROM approvals WHERE status = 'pending' ORDER BY created_at ASC",
+        )
+        .all() as unknown as ApprovalDbRow[];
+      return rows.map(mapApprovalRow);
+    },
+
+    decide: (id: string, status: "approved" | "denied", decidedBy: string, note: string | null): ApprovalRow | null => {
+      return this.runInTransaction((): ApprovalRow | null => {
+        const current = this.db
+          .prepare(
+            "SELECT id, action_event_id, status, summary_json, created_at, expires_at, decided_at, decided_by, note FROM approvals WHERE id = ?",
+          )
+          .get(id) as unknown as ApprovalDbRow | undefined;
+        if (!current || current.status !== "pending") return null;
+        const decidedAt = new Date().toISOString();
+        this.db
+          .prepare("UPDATE approvals SET status = ?, decided_at = ?, decided_by = ?, note = ? WHERE id = ?")
+          .run(status, decidedAt, decidedBy, note, id);
+        return mapApprovalRow({ ...current, status, decided_at: decidedAt, decided_by: decidedBy, note });
+      });
+    },
+
+    expireOverdue: (nowIso: string): ApprovalRow[] => {
+      return this.runInTransaction((): ApprovalRow[] => {
+        const overdue = this.db
+          .prepare(
+            "SELECT id, action_event_id, status, summary_json, created_at, expires_at, decided_at, decided_by, note FROM approvals WHERE status = 'pending' AND expires_at <= ?",
+          )
+          .all(nowIso) as unknown as ApprovalDbRow[];
+        if (overdue.length === 0) return [];
+        const update = this.db.prepare("UPDATE approvals SET status = 'expired' WHERE id = ?");
+        for (const row of overdue) update.run(row.id);
+        return overdue.map((row) => mapApprovalRow({ ...row, status: "expired" }));
+      });
+    },
+  };
+}
+
+interface ApprovalDbRow {
+  id: string;
+  action_event_id: string;
+  status: string;
+  summary_json: string;
+  created_at: string;
+  expires_at: string;
+  decided_at: string | null;
+  decided_by: string | null;
+  note: string | null;
+}
+
+function mapApprovalRow(row: ApprovalDbRow): ApprovalRow {
+  return {
+    id: row.id,
+    actionEventId: row.action_event_id,
+    status: row.status as ApprovalRow["status"],
+    summary: JSON.parse(row.summary_json) as unknown,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    decidedAt: row.decided_at,
+    decidedBy: row.decided_by,
+    note: row.note,
   };
 }

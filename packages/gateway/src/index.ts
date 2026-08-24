@@ -18,6 +18,7 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, "shutting down");
     await configWatcher.close();
+    ctx.approvalManager.stop();
     await app.close();
     await ctx.storage.close();
     process.exit(0);

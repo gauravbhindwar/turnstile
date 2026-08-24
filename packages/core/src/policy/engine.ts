@@ -3,7 +3,7 @@ import type { FailMode } from "../config/schema.js";
 import type { Storage } from "../storage/types.js";
 import type { Logger } from "../logging/logger.js";
 import type { PolicyFile } from "./schema.js";
-import type { PolicyPlugin, PluginResult, MatchedPolicyTrace } from "./types.js";
+import type { PolicyPlugin, PluginResult, MatchedPolicyTrace, ApprovalHint } from "./types.js";
 import { matchesEvent } from "./match.js";
 import { makePluginKv } from "./pluginKv.js";
 import type { PriceSheet } from "../metering/priceSheet.js";
@@ -26,7 +26,7 @@ export interface EvaluateResult {
   matchedPolicies: MatchedPolicyTrace[];
   transformedParams: unknown;
   escalatedPolicyId?: string;
-  approvalHint?: { message?: string; timeoutS?: number };
+  approvalHint?: ApprovalHint;
 }
 
 async function runWithTimeout(promise: Promise<PluginResult>, ms: number): Promise<PluginResult> {
@@ -53,7 +53,7 @@ export class PolicyEngine {
     let finalReason = "no matching policy; default allow";
     let transformedParams: unknown = event.params.raw;
     let escalatedPolicyId: string | undefined;
-    let approvalHint: { message?: string; timeoutS?: number } | undefined;
+    let approvalHint: ApprovalHint | undefined;
     let denied = false;
     let escalated = false;
 

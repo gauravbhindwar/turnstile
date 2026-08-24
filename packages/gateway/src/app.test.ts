@@ -27,6 +27,7 @@ async function makeApp() {
   return {
     app,
     close: async () => {
+      ctx.approvalManager.stop();
       await app.close();
       await ctx.storage.close();
     },

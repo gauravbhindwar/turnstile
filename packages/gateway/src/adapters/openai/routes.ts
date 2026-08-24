@@ -4,6 +4,7 @@ import {
   costForModel,
   estimateTokensFromChars,
   uuidv7,
+  ApprovalQueueFullError,
   type ActionEvent,
   type OutcomeEvent,
 } from "@turnstile/core";
@@ -107,27 +108,77 @@ export function registerOpenAiRoutes(app: App, ctx: GatewayContext): void {
     }
 
     if (decision.outcome === "escalate") {
-      await ctx.pipeline.recordOutcome(
-        event,
-        {
-          eventId: uuidv7(),
-          actionEventId: event.eventId,
-          ts: new Date().toISOString(),
-          status: "denied",
-          httpStatus: 403,
-          latencyMs: performance.now() - startedAt,
-          errorCode: "APPROVAL_REQUIRED_UNSUPPORTED",
-        },
-        evalResult,
-      );
-      return reply.code(403).send({
-        error: {
-          type: "turnstile_policy_block",
-          code: "APPROVAL_REQUIRED_UNSUPPORTED",
-          reason: `${decision.finalReason} (human-in-the-loop approvals ship in Milestone 2; this policy escalates, which is not actionable yet)`,
-          traceId,
-        },
-      });
+      let approval;
+      try {
+        approval = await ctx.approvalManager.escalate(event, decision.finalReason, evalResult.approvalHint?.timeoutS);
+      } catch (err) {
+        if (err instanceof ApprovalQueueFullError) {
+          await ctx.pipeline.recordOutcome(
+            event,
+            {
+              eventId: uuidv7(),
+              actionEventId: event.eventId,
+              ts: new Date().toISOString(),
+              status: "denied",
+              httpStatus: 503,
+              latencyMs: performance.now() - startedAt,
+              errorCode: "APPROVAL_QUEUE_FULL",
+            },
+            evalResult,
+          );
+          return reply.code(503).send({ error: { type: "turnstile_policy_block", code: "APPROVAL_QUEUE_FULL", reason: err.message, traceId } });
+        }
+        throw err;
+      }
+
+      // Parks the HTTP response until a human decides or the timeout
+      // fires (§11). Agent-side: no auto-retry — the caller should surface
+      // this to its own operator and treat connection loss as deny.
+      const decided = await ctx.approvalManager.waitForDecision(approval.id);
+      await ctx.pipeline.recordApprovalDecision(decided);
+
+      if (decided.status === "denied") {
+        await ctx.pipeline.recordOutcome(
+          event,
+          {
+            eventId: uuidv7(),
+            actionEventId: event.eventId,
+            ts: new Date().toISOString(),
+            status: "approval_denied",
+            httpStatus: 403,
+            latencyMs: performance.now() - startedAt,
+            errorCode: "APPROVAL_DENIED",
+          },
+          evalResult,
+        );
+        return reply.code(403).send({
+          error: { type: "turnstile_policy_block", code: "APPROVAL_DENIED", reason: decided.note ?? "denied by an operator", approvalId: decided.id, traceId },
+        });
+      }
+
+      if (decided.status === "expired") {
+        const onTimeout = evalResult.approvalHint?.onTimeout ?? "deny";
+        if (onTimeout === "deny") {
+          await ctx.pipeline.recordOutcome(
+            event,
+            {
+              eventId: uuidv7(),
+              actionEventId: event.eventId,
+              ts: new Date().toISOString(),
+              status: "approval_timeout",
+              httpStatus: 403,
+              latencyMs: performance.now() - startedAt,
+              errorCode: "APPROVAL_TIMEOUT",
+            },
+            evalResult,
+          );
+          return reply.code(403).send({
+            error: { type: "turnstile_policy_block", code: "APPROVAL_TIMEOUT", reason: "no decision before the approval deadline", approvalId: decided.id, traceId },
+          });
+        }
+        // onTimeout === "allow": fall through to execute below.
+      }
+      // decided.status === "approved" (or expired+allow): fall through to execute.
     }
 
     let upstream;

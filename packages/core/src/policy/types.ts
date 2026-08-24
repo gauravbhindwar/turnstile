@@ -13,6 +13,10 @@ export interface PluginKV {
 export interface ApprovalHint {
   message?: string;
   timeoutS?: number;
+  // require_approval's on_timeout setting: what the final outcome should be
+  // if nobody decides before the deadline. Defaults to "deny" if absent —
+  // the fail-closed choice (D10).
+  onTimeout?: "deny" | "allow";
 }
 
 export interface BudgetsCapability {

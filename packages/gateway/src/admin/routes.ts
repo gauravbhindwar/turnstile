@@ -111,6 +111,41 @@ export function registerAdminRoutes(app: App, ctx: GatewayContext): void {
     return { data: { revoked: true } };
   });
 
+  app.get("/admin/v1/approvals", { preHandler: adminAuth }, async (request, reply) => {
+    const query = request.query as { status?: string };
+    if (query.status && query.status !== "pending") {
+      return reply.code(400).send({
+        error: {
+          code: "UNSUPPORTED_STATUS_FILTER",
+          message: `unsupported status filter "${query.status}" (only "pending" is queryable; decided history isn't indexed separately in v0.x)`,
+        },
+      });
+    }
+    return { data: ctx.storage.approvals.listPending() };
+  });
+
+  app.get("/admin/v1/approvals/:id", { preHandler: adminAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const approval = ctx.storage.approvals.get(id);
+    if (!approval) {
+      return reply.code(404).send({ error: { code: "APPROVAL_NOT_FOUND", message: `no approval with id "${id}"` } });
+    }
+    return { data: approval };
+  });
+
+  app.post("/admin/v1/approvals/:id/decide", { preHandler: adminAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { decision: "approved" | "denied"; note?: string; decidedBy?: string };
+    if (body.decision !== "approved" && body.decision !== "denied") {
+      return reply.code(400).send({ error: { code: "INVALID_DECISION", message: 'decision must be "approved" or "denied"' } });
+    }
+    const decided = ctx.approvalManager.decide(id, body.decision, body.decidedBy ?? "admin", body.note ?? null);
+    if (!decided) {
+      return reply.code(409).send({ error: { code: "APPROVAL_NOT_PENDING", message: "already decided, expired, or unknown" } });
+    }
+    return { data: decided };
+  });
+
   app.get("/admin/v1/upstreams", { preHandler: adminAuth }, async () => ({ data: ctx.storage.upstreams.list() }));
 
   app.put("/admin/v1/upstreams/:name", { preHandler: adminAuth }, async (request) => {

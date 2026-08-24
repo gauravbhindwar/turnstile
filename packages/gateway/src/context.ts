@@ -6,6 +6,7 @@ import type {
   PriceSheet,
   PolicyPlugin,
   EventBus,
+  ApprovalManager,
 } from "@turnstile/core";
 import type { PolicyFile } from "@turnstile/core";
 
@@ -19,4 +20,5 @@ export interface GatewayContext {
   plugins: Map<string, PolicyPlugin>;
   policies: PolicyFile[];
   credentialMasterKey: Buffer;
+  approvalManager: ApprovalManager;
 }
