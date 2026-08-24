@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@turnstile/core": "workspace:*",
-    "fastify": "^4.28.1"
+    "fastify": "^4.28.1",
+    "minimatch": "^9.0.5"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",

@@ -1,23 +1,25 @@
 import Fastify from "fastify";
-import type { Logger, TurnstileConfig } from "@turnstile/core";
-
-export interface BuildAppOptions {
-  config: TurnstileConfig;
-  logger: Logger;
-}
+import type { GatewayContext } from "./context.js";
+import { registerOpenAiRoutes } from "./adapters/openai/routes.js";
+import { registerAdminRoutes } from "./admin/routes.js";
 
 const BOOT_TIME = Date.now();
 
-export function buildApp(options: BuildAppOptions) {
-  const app = Fastify({ logger: options.logger });
+export type App = ReturnType<typeof buildApp>;
 
-  // Unauthenticated liveness route, deliberately separate from /admin/v1/health
-  // (which requires the admin token) so container healthchecks stay simple. §21
+export function buildApp(ctx: GatewayContext) {
+  const app = Fastify({ logger: ctx.logger, bodyLimit: 2 * 1024 * 1024 });
+
+  // Unauthenticated liveness route, deliberately separate from
+  // /admin/v1/health (which requires the admin token). §21
   app.get("/healthz", async () => ({
     status: "ok",
     version: process.env.npm_package_version ?? "0.1.0",
     uptime_s: Math.floor((Date.now() - BOOT_TIME) / 1000),
   }));
+
+  registerOpenAiRoutes(app, ctx);
+  registerAdminRoutes(app, ctx);
 
   return app;
 }
