@@ -22,7 +22,9 @@
     "chokidar": "^4.0.1",
     "uuid": "^10.0.0",
     "yaml": "^2.5.1",
-    "pino-pretty": "^11.2.2"
+    "pino-pretty": "^11.2.2",
+    "js-tiktoken": "^1.0.14",
+    "minimatch": "^9.0.5"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",

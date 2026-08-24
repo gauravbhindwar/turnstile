@@ -95,3 +95,5 @@ export const TurnstileConfigSchema = z.object({
 });
 
 export type TurnstileConfig = z.infer<typeof TurnstileConfigSchema>;
+export type FailMode = z.infer<typeof FailModeSchema>;
+export type DefaultActionByClass = z.infer<typeof DefaultActionByClassSchema>;
